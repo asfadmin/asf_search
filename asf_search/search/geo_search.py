@@ -2,7 +2,9 @@ from typing import Union, Iterable
 import datetime
 
 from asf_search.search import search
+from asf_search.ASFSearchOptions import ASFSearchOptions
 from asf_search.ASFSearchResults import ASFSearchResults
+from asf_search.ASFSession import ASFSession
 from asf_search.constants import INTERNAL
 
 
@@ -25,7 +27,7 @@ def geo_search(
         start: Union[datetime.datetime, str] = None,
         maxResults: int = None,
         host: str = INTERNAL.SEARCH_API_HOST,
-        cmr_token: str = None,
+        asf_session: ASFSession = None,
         cmr_provider: str = None
 ) -> ASFSearchResults:
     """
@@ -56,6 +58,7 @@ def geo_search(
     """
 
     kwargs = locals()
-    data = dict((k,v) for k,v in kwargs.items() if v is not None and v != '')
+    data = dict((k,v) for k,v in kwargs.items() if k != "host" and v is not None)
+    data = ASFSearchOptions(**data)
 
-    return search(**data)
+    return search(data, host=host)

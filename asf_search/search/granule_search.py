@@ -1,14 +1,16 @@
 from typing import Iterable
 
 from asf_search.search import search
+from asf_search.ASFSearchOptions import ASFSearchOptions
 from asf_search.ASFSearchResults import ASFSearchResults
+from asf_search.ASFSession import ASFSession
 from asf_search.constants import INTERNAL
 
 
 def granule_search(
         granule_list: Iterable[str],
         host: str = INTERNAL.SEARCH_API_HOST,
-        cmr_token: str = None,
+        asf_session: ASFSession = None,
         cmr_provider: str = None
 ) -> ASFSearchResults:
     """
@@ -22,6 +24,7 @@ def granule_search(
     :return: ASFSearchResults(list) of search results
     """
     kwargs = locals()
-    data = dict((k,v) for k,v in kwargs.items() if v is not None and v != '')
+    data = dict((k,v) for k,v in kwargs.items() if k != "host" and v is not None)
+    data = ASFSearchOptions(**data)
 
-    return search(**data)
+    return search(data, host=host)
