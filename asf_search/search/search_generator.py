@@ -17,6 +17,7 @@ from asf_search.CMR.datasets import dataset_collections
 
 from asf_search.ASFSession import ASFSession
 from asf_search.ASFProduct import ASFProduct
+from asf_search.CMR.translate import should_use_bbox
 from asf_search.exceptions import ASFSearch4xxError, ASFSearch5xxError, ASFSearchError, CMRIncompleteError
 from asf_search.constants import INTERNAL
 from asf_search.WKT.validate_wkt import validate_wkt
@@ -79,9 +80,6 @@ def search_generator(
     if maxResults is not None and \
         (getattr(opts, 'granule_list', False) or getattr(opts, 'product_list', False)):
             raise ValueError("Cannot use maxResults along with product_list/granule_list.")
-    
-    if opts.dataset is not None and opts.platform is not None:
-        raise ValueError("Cannot use dataset along with platform keyword in search.")
     
     preprocess_opts(opts)
 
@@ -169,20 +167,27 @@ def get_page(session: ASFSession, url: str, translated_opts: List) -> Response:
 
 
 def preprocess_opts(opts: ASFSearchOptions):
+    """Sets the appropriate WKT to pass along, sets default timezones + start/end order check, and transforms platform aliases to actual values"""
     # Repair WKT here so it only happens once, and you can save the result to the new Opts object:
-    wrap_wkt(opts=opts)
-
+    select_wkt(opts=opts)
+            
     # Date/Time logic, convert "today" to the literal timestamp if needed:
     set_default_dates(opts=opts)
 
     # Platform Alias logic:
     set_platform_alias(opts=opts)
 
-
-def wrap_wkt(opts: ASFSearchOptions):
+def select_wkt(opts: ASFSearchOptions):
+    """Validates the provided WKT, and chooses the appropriate version to use (wrapped or unwrapped)
+    - If we should use the bbox, we pass the unwrapped wkt (this will be used when building the bounding box)
+    - Otherwise, we pass the wrapped wkt
+    """
     if opts.intersectsWith is not None:
-        wrapped, _, __ = validate_wkt(opts.intersectsWith)
-        opts.intersectsWith = wrapped.wkt
+        wrapped, unwrapped, _ = validate_wkt(opts.intersectsWith)
+        if should_use_bbox(wrapped):
+            opts.intersectsWith = unwrapped.wkt
+        else:
+            opts.intersectsWith = wrapped.wkt
 
 
 def set_default_dates(opts: ASFSearchOptions):
